@@ -32,4 +32,5 @@ if (args[0] === 'run') {
 
 console.log('local-ai-harness CLI');
 console.log('  node src/cli.js run <command> [--confirm-write] [--confirm-delete] [--confirm-external] [--confirm-sure]');
+console.log('  # includes dom commands, e.g. dom --file page.html query "a" --top 5 --text');
 console.log('  node src/cli.js health');
