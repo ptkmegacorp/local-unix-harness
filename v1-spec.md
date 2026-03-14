@@ -145,3 +145,10 @@ Selection order:
 3. unavailable error (no host fallback for class B/C)
 
 Sandbox health/status should expose provider/runtime availability and deterministic initialization errors.
+
+
+## 8) DOM act mode safety (local-only)
+- `dom ... act ...` is classified as Class B (audited).
+- Requires explicit `HARNESS_DOM_ACT_ENABLED=1` toggle.
+- Allowed targets: localhost/loopback/*.local/home.local/private LAN ranges only.
+- Non-local targets are rejected deterministically.

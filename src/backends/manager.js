@@ -5,6 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 const BUILTIN_BIN = fileURLToPath(new URL('../../bin', import.meta.url));
 
+function isDomActSegment(seg) {
+  return /^dom\s+/.test(seg) && /\bact\b/.test(seg);
+}
+
 export class BackendManager {
   constructor({ nativeBackend, sandboxBackend, classifier = classifyCommand } = {}) {
     this.native = nativeBackend;
@@ -47,11 +51,12 @@ export class BackendManager {
       if (!backend) {
         return fail('[error] backend selection failed.');
       }
-      if ((policyClass === 'B' || policyClass === 'C') && !this.sandbox?.isAvailable?.()) {
+      if ((policyClass === 'B' || policyClass === 'C') && !this.sandbox?.isAvailable?.() && !isDomActSegment(seg)) {
         return fail('[error] sandbox backend unavailable: no supported runtime detected (boxlite, docker, podman). Install/enable a sandbox runtime and retry class B/C commands.');
       }
 
-      const result = (policyClass === 'A' && backend.name === 'sandbox' && !this.sandbox?.isAvailable?.())
+      const result = ((policyClass === 'A' && backend.name === 'sandbox' && !this.sandbox?.isAvailable?.()) ||
+        (policyClass === 'B' && isDomActSegment(seg) && !this.sandbox?.isAvailable?.()))
         ? await executeClassAFallback(seg, cfg)
         : await backend.execute(seg, {
             cwd: cfg.cwd,

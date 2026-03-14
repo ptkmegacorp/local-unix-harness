@@ -3,6 +3,10 @@ const DESTRUCTIVE = ['rm', 'shutdown', 'reboot', 'mkfs', 'dd', 'systemctl', 'ser
 const EXTERNAL = ['curl', 'wget', 'scp', 'ssh', 'nc', 'telnet', 'mail', 'sendmail'];
 const WRITE_HINTS = ['>', '>>', 'tee', 'mv', 'cp', 'mkdir', 'touch'];
 
+function isDomActSegment(seg) {
+  return /^dom\s+/.test(seg) && /\bact\b/.test(seg);
+}
+
 export function classifyCommand(command) {
   const segments = command
     .split(/&&|\|\||;/)
@@ -13,6 +17,10 @@ export function classifyCommand(command) {
   for (const seg of segments.length ? segments : [command]) {
     const first = seg.split(/\s+/)[0] || '';
     if (DESTRUCTIVE.includes(first) || EXTERNAL.includes(first)) return 'C';
+    if (isDomActSegment(seg)) {
+      sawB = true;
+      continue;
+    }
     if (WRITE_HINTS.some((w) => seg.includes(w))) {
       sawB = true;
       continue;

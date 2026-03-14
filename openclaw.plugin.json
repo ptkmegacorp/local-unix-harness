@@ -55,6 +55,9 @@
       },
       "domEnabled": {
         "type": "boolean"
+      },
+      "domActEnabled": {
+        "type": "boolean"
       }
     }
   }
