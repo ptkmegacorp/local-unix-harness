@@ -1,8 +1,9 @@
 import { Backend } from './backend.js';
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { executeLlmSegment } from '../llm.js';
 
-const NATIVE_COMMANDS = new Set(['echo', 'pwd', 'true', 'false', 'cat', 'ls']);
+const NATIVE_COMMANDS = new Set(['echo', 'pwd', 'true', 'false', 'cat', 'ls', 'llm']);
 const UNSAFE_META = /[|><`$(){}\[*?]/;
 
 export class NativeBackend extends Backend {
@@ -38,6 +39,8 @@ export class NativeBackend extends Backend {
         return this.execCat(args, ctx);
       case 'ls':
         return this.execLs(args, ctx);
+      case 'llm':
+        return executeLlmSegment(segment, ctx);
       default:
         return notFound(cmd);
     }

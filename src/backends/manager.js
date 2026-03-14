@@ -61,7 +61,12 @@ export class BackendManager {
         : await backend.execute(seg, {
             cwd: cfg.cwd,
             root: cfg.root,
-            timeoutMs: cfg.timeoutMs
+            timeoutMs: cfg.timeoutMs,
+            llmEndpoints: cfg.llmEndpoints,
+            llmModel: cfg.llmModel,
+            llmDefaultModel: cfg.llmDefaultModel,
+            llmToolsEnabled: cfg.llmToolsEnabled,
+            llmTimeoutMs: cfg.llmTimeoutMs
           });
       backendTrail.push({ segment: seg, backend: backend.name, policyClass });
       prevExit = result.exitCode;
