@@ -269,7 +269,7 @@ Safety model:
 - Act rejects non-local URLs (localhost/loopback/*.local/private LAN only).
 - Non-local error: `[error] dom act local-only: URL not allowed (<url>)`.
 
-## DOM read extras: `pick`, `near`, `diff`
+## DOM read extras: `pick`, `near`, `path`, `diff`
 
 Examples:
 
@@ -282,6 +282,16 @@ npm run cli -- run 'dom --file sample.html pick "li" --fields "text:." --jsonl |
 
 # find nearest context containing text and extract targets
 npm run cli -- run 'dom --file sample.html near "email" --within "form,section" --return "input@name,input@value"'
+
+# build stable path selectors from a CSS selector
+npm run cli -- run 'dom --file sample.html path --selector ".price" --style css --top 5'
+
+# build ancestry paths from text match
+npm run cli -- run 'dom --file sample.html path --text "Buy Now" --style ancestry --depth 3'
+
+# user-style pipeline examples
+npm run cli -- run 'dom near "Buy Now" --within "section,form" --return "." | dom --file sample.html path --style css'
+npm run cli -- run 'dom --file sample.html pick ".price" --fields "text:." --jsonl | dom --file sample.html path --depth 3'
 
 # diff compact snapshots from files
 npm run cli -- run 'dom diff before.json after.json'

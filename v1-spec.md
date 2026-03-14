@@ -157,7 +157,14 @@ Sandbox health/status should expose provider/runtime availability and determinis
 The following DOM read commands are explicitly Class A (read-only) and deterministic:
 - `dom pick`
 - `dom near`
+- `dom path`
 - `dom diff`
+
+`dom path` purpose:
+- generate stable CSS selectors and ancestry paths from:
+  - explicit selector mode (`--selector`)
+  - text mode (`--text`)
+  - piped JSON/JSONL rows from prior `dom` command output where feasible.
 
 Design constraints:
 - Stream-first: supports file/URL/stdin input and JSON/JSONL outputs suitable for piping.
