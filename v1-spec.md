@@ -13,6 +13,9 @@ with strict semantics and safety rails so agents can compose workflows reliably 
 
 ## Layer 1: Execution (Unix semantics, lossless)
 - Parse and execute chain operators: `|`, `&&`, `||`, `;`
+- Route each chain segment through a backend manager
+  - `NativeBackend`: typed/in-process command handlers (no host shell)
+  - `SandboxBackend`: isolated execution path boundary (initial implementation uses controlled shell path)
 - Preserve raw stdout/stderr bytes internally
 - Preserve exact exit codes per stage
 - No truncation, no metadata injection in pipeline data path
@@ -133,3 +136,5 @@ Store as JSONL in `./logs/run-trace.jsonl`.
 3. Safety gates + policy classes
 4. Trace logging
 5. Regression tests (see `v1-test-matrix.md`)
+
+Current sandbox status: the sandbox backend boundary is in place and currently uses the controlled local shell execution path. Planned hardening target is a VM/microVM runner (boxlite/firecracker) behind the same backend interface.

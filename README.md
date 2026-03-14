@@ -4,10 +4,12 @@ Unix-native single-surface harness implementing `run(command)` with robust opera
 
 ## Features
 
-- **Modules**: parser / executor / presenter / policy / trace / server
+- **Modules**: parser / executor / backends(manager/native/sandbox) / presenter / policy / trace / server
 - **Operators**: `|`, `&&`, `||`, `;` with quote-aware chain parsing
 - **Two-layer architecture**:
-  - Layer 1: raw execution (stdout/stderr/exit semantics)
+  - Layer 1: raw execution (stdout/stderr/exit semantics) via backend manager
+    - NativeBackend: typed in-process handlers for simple read-only commands (no host shell)
+    - SandboxBackend: isolated command execution boundary (currently controlled bash path; TODO hook for boxlite/firecracker)
   - Layer 2: LLM-facing presentation (binary guard, truncation, stderr display, footer)
 - **Safety classes**:
   - A: read-only allowed
@@ -18,6 +20,14 @@ Unix-native single-surface harness implementing `run(command)` with robust opera
 - **Trace**: JSONL rows in `logs/run-trace.jsonl`
 - **HTTP API**: `POST /run { command }`
 - **LLM adapter**: local endpoints health + optional formatting pass via OpenAI-compatible API
+
+## Backend routing policy
+
+- Class **A** (read-only): prefers `NativeBackend` when command shape is supported safely (no shell metacharacters).
+- Class **B/C**: always routed to `SandboxBackend`.
+- Class **C** still requires explicit confirm gates (`confirmDelete`, `confirmExternalSend`) before any execution.
+
+This keeps compatibility with existing `run(command)` semantics while introducing a clean backend boundary.
 
 ## Install
 
@@ -162,6 +172,10 @@ Troubleshooting:
 
 - `src/parser.js`
 - `src/executor.js`
+- `src/backends/backend.js`
+- `src/backends/manager.js`
+- `src/backends/native.js`
+- `src/backends/sandbox.js`
 - `src/presenter.js`
 - `src/policy.js`
 - `src/trace.js`
