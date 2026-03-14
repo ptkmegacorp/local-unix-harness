@@ -22,12 +22,14 @@ if (args[0] === 'run') {
   }
   const result = await run(command, cfg, {
     confirmDelete: args.includes('--confirm-delete'),
-    confirmExternalSend: args.includes('--confirm-external')
+    confirmExternalSend: args.includes('--confirm-external'),
+    confirmWrite: args.includes('--confirm-write'),
+    confirmSure: args.includes('--confirm-sure')
   });
   console.log(result.output);
   process.exit(result.exitCode);
 }
 
 console.log('local-ai-harness CLI');
-console.log('  node src/cli.js run <command>');
+console.log('  node src/cli.js run <command> [--confirm-write] [--confirm-delete] [--confirm-external] [--confirm-sure]');
 console.log('  node src/cli.js health');

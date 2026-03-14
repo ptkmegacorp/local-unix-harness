@@ -29,7 +29,9 @@ const server = createServer(async (req, res) => {
         if (!j.command || typeof j.command !== 'string') return json(res, 400, { ok: false, error: 'command is required' });
         const result = await run(j.command, cfg, {
           confirmDelete: Boolean(j?.confirm?.delete),
-          confirmExternalSend: Boolean(j?.confirm?.external)
+          confirmExternalSend: Boolean(j?.confirm?.external),
+          confirmWrite: Boolean(j?.confirm?.write),
+          confirmSure: Boolean(j?.confirm?.sure)
         });
         return json(res, 200, result);
       } catch (e) {

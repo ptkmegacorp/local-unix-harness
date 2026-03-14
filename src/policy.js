@@ -25,14 +25,25 @@ export function classifyCommand(command) {
 
 export function enforcePolicy(command, options = {}) {
   const policyClass = classifyCommand(command);
+  const sure = Boolean(options.confirmSure);
+
+  if (policyClass === 'B') {
+    if (!options.confirmWrite) {
+      return refusal('Mutable command blocked', 'Set confirmWrite=true and retry.');
+    }
+  }
+
   if (policyClass === 'C') {
     const isDelete = /(^|\s)rm(\s|$)/.test(command);
     const isExternal = EXTERNAL.some((e) => new RegExp(`(^|\\s)${e}(\\s|$)`).test(command));
     if (isDelete && !options.confirmDelete) {
-      return refusal('Destructive command blocked', 'Use confirm_delete(targets[]) and re-run command.');
+      return refusal('Destructive command blocked', 'Set confirmDelete=true and retry.');
     }
     if (isExternal && !options.confirmExternalSend) {
-      return refusal('External command blocked', 'Use confirm_external_send(channel, destination) and re-run command.');
+      return refusal('External command blocked', 'Set confirmExternalSend=true and retry.');
+    }
+    if (!sure) {
+      return refusal('Second confirmation required', 'Set confirmSure=true ("are you sure") and retry.');
     }
   }
   return { ok: true, policyClass };
