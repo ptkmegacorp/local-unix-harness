@@ -1,5 +1,9 @@
 import { parseChain } from '../parser.js';
 import { classifyCommand } from '../policy.js';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const BUILTIN_BIN = fileURLToPath(new URL('../../bin', import.meta.url));
 
 export class BackendManager {
   constructor({ nativeBackend, sandboxBackend, classifier = classifyCommand } = {}) {
@@ -40,11 +44,20 @@ export class BackendManager {
       }
 
       const { backend, policyClass } = this.selectBackend(seg);
-      const result = await backend.execute(seg, {
-        cwd: cfg.cwd,
-        root: cfg.root,
-        timeoutMs: cfg.timeoutMs
-      });
+      if (!backend) {
+        return fail('[error] backend selection failed.');
+      }
+      if ((policyClass === 'B' || policyClass === 'C') && !this.sandbox?.isAvailable?.()) {
+        return fail('[error] sandbox backend unavailable: no supported runtime detected (boxlite, docker, podman). Install/enable a sandbox runtime and retry class B/C commands.');
+      }
+
+      const result = (policyClass === 'A' && backend.name === 'sandbox' && !this.sandbox?.isAvailable?.())
+        ? await executeClassAFallback(seg, cfg)
+        : await backend.execute(seg, {
+            cwd: cfg.cwd,
+            root: cfg.root,
+            timeoutMs: cfg.timeoutMs
+          });
       backendTrail.push({ segment: seg, backend: backend.name, policyClass });
       prevExit = result.exitCode;
       finalStdout = result.stdout;
@@ -64,4 +77,42 @@ export class BackendManager {
 
 function fail(stderr) {
   return { ok: false, exitCode: 1, stdout: Buffer.alloc(0), stderr: Buffer.from(stderr), durationMs: 0, backendTrail: [] };
+}
+
+async function executeClassAFallback(segment, cfg = {}) {
+  const timeoutMs = cfg.timeoutMs ?? 60000;
+  return new Promise((resolve) => {
+    const env = { ...process.env };
+    const pathParts = [BUILTIN_BIN];
+    if (cfg.root) pathParts.push(`${cfg.root}/bin`);
+    pathParts.push(env.PATH || '');
+    env.PATH = pathParts.join(':');
+
+    const child = spawn('bash', ['-c', segment], { cwd: cfg.cwd, env });
+    const out = [];
+    const err = [];
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGKILL');
+    }, timeoutMs);
+
+    child.stdout.on('data', (d) => out.push(Buffer.from(d)));
+    child.stderr.on('data', (d) => err.push(Buffer.from(d)));
+
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (timedOut) {
+        err.push(Buffer.from(`[error] timeout: command exceeded ${timeoutMs}ms limit\n`));
+        resolve({ backend: 'native-fallback', exitCode: 124, stdout: Buffer.concat(out), stderr: Buffer.concat(err) });
+        return;
+      }
+      resolve({ backend: 'native-fallback', exitCode: code ?? 1, stdout: Buffer.concat(out), stderr: Buffer.concat(err) });
+    });
+
+    child.on('error', (e) => {
+      clearTimeout(timer);
+      resolve({ backend: 'native-fallback', exitCode: 127, stdout: Buffer.alloc(0), stderr: Buffer.from(String(e.message)) });
+    });
+  });
 }

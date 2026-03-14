@@ -15,7 +15,7 @@ with strict semantics and safety rails so agents can compose workflows reliably 
 - Parse and execute chain operators: `|`, `&&`, `||`, `;`
 - Route each chain segment through a backend manager
   - `NativeBackend`: typed/in-process command handlers (no host shell)
-  - `SandboxBackend`: isolated execution path boundary (initial implementation uses controlled shell path)
+  - `SandboxBackend`: concrete isolated runtime selector (`boxlite` preferred, `docker/podman` fallback, unavailable error if none)
 - Preserve raw stdout/stderr bytes internally
 - Preserve exact exit codes per stage
 - No truncation, no metadata injection in pipeline data path
@@ -137,4 +137,11 @@ Store as JSONL in `./logs/run-trace.jsonl`.
 4. Trace logging
 5. Regression tests (see `v1-test-matrix.md`)
 
-Current sandbox status: the sandbox backend boundary is in place and currently uses the controlled local shell execution path. Planned hardening target is a VM/microVM runner (boxlite/firecracker) behind the same backend interface.
+Current sandbox status: concrete runtime-backed sandbox selection is implemented behind the same backend interface.
+
+Selection order:
+1. boxlite
+2. docker/podman
+3. unavailable error (no host fallback for class B/C)
+
+Sandbox health/status should expose provider/runtime availability and deterministic initialization errors.

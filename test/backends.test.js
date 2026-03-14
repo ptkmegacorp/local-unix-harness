@@ -36,16 +36,39 @@ test('native backend path executes read-only commands', async () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('sandbox backend path executes class B/C commands', async () => {
+test('sandbox backend unavailable returns deterministic error for class B/C', async () => {
+  const manager = new BackendManager({
+    nativeBackend: new NativeBackend(),
+    sandboxBackend: { name: 'sandbox', canHandle: () => true, isAvailable: () => false, execute: async () => ({ exitCode: 0, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0) }) }
+  });
+
+  const b = await manager.execute('touch made-by-sandbox.txt', { timeoutMs: 2000 });
+  assert.equal(b.ok, false);
+  assert.match(b.stderr.toString('utf8'), /sandbox backend unavailable/i);
+
+  const c = await manager.execute('curl --version', { timeoutMs: 2000 });
+  assert.equal(c.ok, false);
+  assert.match(c.stderr.toString('utf8'), /sandbox backend unavailable/i);
+});
+
+test('sandbox runtime detection selection metadata', () => {
+  const sandbox = new SandboxBackend();
+  const health = sandbox.health();
+  assert.ok(Object.hasOwn(health, 'available'));
+  assert.ok(Object.hasOwn(health, 'provider'));
+  if (!health.available) {
+    assert.match(health.initError || '', /runtime available/i);
+  }
+});
+
+test('sandbox backend path executes command when runtime available', { skip: !new SandboxBackend().isAvailable() }, async () => {
   const dir = mkdtempSync(join(tmpdir(), 'harness-sandbox-'));
   const manager = new BackendManager({ nativeBackend: new NativeBackend(), sandboxBackend: new SandboxBackend() });
 
-  const b = await manager.execute('touch made-by-sandbox.txt', { cwd: dir, root: dir, timeoutMs: 2000 });
-  assert.equal(b.exitCode, 0);
+  const b = await manager.execute('sh -lc "echo sandbox-ok"', { cwd: dir, root: dir, timeoutMs: 8000 });
   assert.equal(b.backendTrail[0].backend, 'sandbox');
-
-  const c = await manager.execute('curl --version | head -n 1', { cwd: dir, root: dir, timeoutMs: 5000 });
-  assert.equal(c.backendTrail[0].backend, 'sandbox');
+  assert.equal(b.exitCode, 0);
+  assert.match(b.stdout.toString('utf8'), /sandbox-ok/);
   rmSync(dir, { recursive: true, force: true });
 });
 

@@ -2,13 +2,15 @@
 import { getConfig } from './config.js';
 import { run } from './run.js';
 import { llmHealth } from './presenter.js';
+import { getBackendManager } from './executor.js';
 
 const args = process.argv.slice(2);
 const cfg = getConfig();
 
 if (args[0] === 'health') {
-  const h = await llmHealth(cfg);
-  console.log(JSON.stringify(h, null, 2));
+  const llm = await llmHealth(cfg);
+  const sandbox = getBackendManager().sandbox?.health?.() || { available: false, reason: 'sandbox backend not initialized' };
+  console.log(JSON.stringify({ llm, sandbox }, null, 2));
   process.exit(0);
 }
 

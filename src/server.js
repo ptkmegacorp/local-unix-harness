@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { getConfig } from './config.js';
 import { run } from './run.js';
 import { llmHealth } from './presenter.js';
+import { getBackendManager } from './executor.js';
 
 const cfg = getConfig();
 const port = Number(process.env.PORT || 8787);
@@ -15,7 +16,8 @@ function json(res, code, obj) {
 const server = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/health') {
     const health = await llmHealth(cfg);
-    return json(res, 200, { ok: true, llm: health });
+    const sandbox = getBackendManager().sandbox?.health?.() || { available: false, reason: 'sandbox backend not initialized' };
+    return json(res, 200, { ok: true, llm: health, sandbox });
   }
 
   if (req.method === 'POST' && req.url === '/run') {

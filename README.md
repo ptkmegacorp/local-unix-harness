@@ -9,7 +9,10 @@ Unix-native single-surface harness implementing `run(command)` with robust opera
 - **Two-layer architecture**:
   - Layer 1: raw execution (stdout/stderr/exit semantics) via backend manager
     - NativeBackend: typed in-process handlers for simple read-only commands (no host shell)
-    - SandboxBackend: isolated command execution boundary (currently controlled bash path; TODO hook for boxlite/firecracker)
+    - SandboxBackend: concrete isolated runtime selector with preference order:
+      1. boxlite
+      2. docker/podman container sandbox
+      3. hard unavailable error (no host-shell fallback for class B/C)
   - Layer 2: LLM-facing presentation (binary guard, truncation, stderr display, footer)
 - **Safety classes**:
   - A: read-only allowed
@@ -25,6 +28,8 @@ Unix-native single-surface harness implementing `run(command)` with robust opera
 
 - Class **A** (read-only): prefers `NativeBackend` when command shape is supported safely (no shell metacharacters).
 - Class **B/C**: always routed to `SandboxBackend`.
+- If no sandbox runtime is available, class **B/C** returns deterministic error:
+  - `[error] sandbox backend unavailable: no supported runtime detected (boxlite, docker, podman)...`
 - Class **C** still requires explicit confirm gates (`confirmDelete`, `confirmExternalSend`) before any execution.
 
 This keeps compatibility with existing `run(command)` semantics while introducing a clean backend boundary.
@@ -75,6 +80,8 @@ Health:
 curl -s localhost:8787/health
 ```
 
+Now returns both LLM and sandbox backend status (provider, runtime availability, init errors).
+
 ## CLI
 
 ```bash
@@ -102,6 +109,29 @@ export HARNESS_USE_LLM_PRESENTER=1
 export HARNESS_LLM_MODEL="your-local-model"
 export HARNESS_LLM_ENDPOINTS="http://127.0.0.1:8080,http://127.0.0.1:8081"
 ```
+
+## Sandbox runtime requirements
+
+At least one sandbox runtime must be installed for class B/C commands:
+
+- Preferred: `boxlite`
+- Fallback: `docker` or `podman`
+
+Selection order is automatic (`boxlite` -> `docker/podman`).
+Optional overrides:
+
+- `HARNESS_SANDBOX_PROVIDER=auto|boxlite|docker|podman`
+- `HARNESS_SANDBOX_IMAGE=<image>` (container backend, default `debian:bookworm-slim`)
+
+Isolation model (container/box runtime):
+- No host root filesystem mount
+- Bound mount only for working directory at `/workspace`
+- `--network none`, dropped capabilities, no-new-privileges
+- Timeout enforced by harness with exit code `124`
+
+Known limits:
+- Runtime/image startup latency affects first command
+- Container image must include `sh` and tools needed by executed commands
 
 ## Tests
 
